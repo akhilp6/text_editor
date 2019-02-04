@@ -85,6 +85,20 @@ char * get_line( text_t *txt, int index){
 }
 
 void append_line( text_t *txt, char * new_line){
+    if(txt->left == NULL){
+        txt->left = (text_t*)new_line;
+        txt->key = 1;
+    }
+    else{
+        text_t* tmp_node = txt;
+        while(tmp_node->right!=NULL){
+            tmp_node = tmp_node->right;
+        }
+        text_t* new_node = get_node();
+        new_node->left = (text_t*)new_line;
+        new_node->key = tmp_node->key + 1;
+        tmp_node->right = new_node;
+    }
     // txt->_text.push_back(new_line);
 }
 
