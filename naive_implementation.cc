@@ -1,15 +1,14 @@
 #include <vector>
 #include <iostream>
 #include <stdlib.h>
+#include <stack>
 
-// // struct text_t{
-// //     std::vector<char*> _text;
-// };
 typedef int key_t;
 typedef char *object_t;
 struct text_t{key_t      key;
                 struct text_t   *left;
                 struct text_t  *right;
+		int height;
                /* possibly additional information */ };
 
 #define BLOCKSIZE 256
@@ -36,6 +35,7 @@ text_t *get_node()
      tmp = currentblock++;
      size_left -= 1;
   }
+tmp->height=0;
   return( tmp );
 }
 
@@ -43,6 +43,7 @@ text_t * create_text(){
     text_t *tmp_node;
     tmp_node = get_node();
     tmp_node->left = NULL;
+    tmp_node->height = 1;
     return( tmp_node );
 }
 
@@ -84,20 +85,51 @@ char * get_line( text_t *txt, int index){
    // return txt->_text[index-1];
 }
 
+void setHeight(text_t* node){
+	node->height=node->left->height>node->right->height?node->left->height+1:node->right->height+1;
+}
+
 void append_line( text_t *txt, char * new_line){
     if(txt->left == NULL){
         txt->left = (text_t*)new_line;
         txt->key = 1;
     }
     else{
+	/*1. Create stack
+	2. Push every node that is visited to stack
+	3. After new node is attached, pop each element and evaluate height
+	*/
+	//1. Create stack
+	std::stack <text_t> st;
+
         text_t* tmp_node = txt;
         while(tmp_node->right!=NULL){
+	//2. Push every node that is visited to stack
+	    st.push(tmp_node);
             tmp_node = tmp_node->right;
         }
         text_t* new_node = get_node();
+	text_t* old_node_dup = get_node();
+
+	old_node_dup->left=tmp_node->left;
+	old_node_dup->right=NULL;
+	old_node_dup->key=tmp_node->key;
+	old_node_dup->height=1;	
+
+	tmp_node->left=old_node_dup;	
+	tmp_node->height=2;
+
         new_node->left = (text_t*)new_line;
         new_node->key = tmp_node->key + 1;
+	new_node->height = 1;
         tmp_node->right = new_node;
+
+	//3. After new node is attached, pop each element and evaluate height
+	while(!st.empty()){
+		text_t* current = st.top();
+		st.pop();
+		setHeight(current);
+	}
     }
     // txt->_text.push_back(new_line);
 }
@@ -140,4 +172,3 @@ char * delete_line( text_t *txt, int index){
     // txt->_text.erase(txt->_text.begin()+index-1);
     // return old;
 }
-
