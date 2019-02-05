@@ -8,7 +8,7 @@ typedef char *object_t;
 struct text_t{key_t      key;
                 struct text_t   *left;
                 struct text_t  *right;
-		int height;
+		        int height;
                /* possibly additional information */ };
 
 #define BLOCKSIZE 256
@@ -88,6 +88,30 @@ char * get_line( text_t *txt, int index){
 void setHeight(text_t* node){
 	node->height=node->left->height>node->right->height?node->left->height+1:node->right->height+1;
 }
+void left_rotation(text_t   *n){
+     text_t   *tmp_node;
+     key_t   tmp_key;
+     tmp_node = n->left;
+     tmp_key = n->key;
+     n->left = n->right;
+     n->key = n->right->key;
+     n->right = n->left->right;   // same as saying n->right->right
+     n->left->right = n->left->left;  //same as saying n->right->left
+     n->left->left = tmp_node;
+     n->left->key = tmp_key;
+}
+void right_rotation(text_t* n){
+    text_t   *tmp_node;
+    key_t   tmp_key;
+    tmp_node = n->right;
+    tmp_key = n->key;
+    n->right = n->left;
+    n->key = n->left->key;
+    n->left = n->right->left;
+    n->right->left = n->right->right;
+    n->right->right = tmp_node;
+    n->right->key = tmp_key;
+}
 
 void append_line( text_t *txt, char * new_line){
     if(txt->left == NULL){
@@ -100,37 +124,71 @@ void append_line( text_t *txt, char * new_line){
 	3. After new node is attached, pop each element and evaluate height
 	*/
 	//1. Create stack
-	std::stack <text_t> st;
+	   std::stack <text_t*> st;
 
         text_t* tmp_node = txt;
         while(tmp_node->right!=NULL){
 	//2. Push every node that is visited to stack
-	    st.push(tmp_node);
+	        st.push(tmp_node);
             tmp_node = tmp_node->right;
         }
         text_t* new_node = get_node();
-	text_t* old_node_dup = get_node();
+        text_t* old_node_dup = get_node();
 
-	old_node_dup->left=tmp_node->left;
-	old_node_dup->right=NULL;
-	old_node_dup->key=tmp_node->key;
-	old_node_dup->height=1;	
+        old_node_dup->left=tmp_node->left;
+        old_node_dup->right=NULL;
+        old_node_dup->key=tmp_node->key;
+        old_node_dup->height=0;
 
-	tmp_node->left=old_node_dup;	
-	tmp_node->height=2;
+        tmp_node->left=old_node_dup;
+        tmp_node->height=1;
 
         new_node->left = (text_t*)new_line;
         new_node->key = tmp_node->key + 1;
-	new_node->height = 1;
+	    new_node->height = 0;
         tmp_node->right = new_node;
+        tmp_node->key = tmp_node->key + 1;
 
 	//3. After new node is attached, pop each element and evaluate height
 	while(!st.empty()){
 		text_t* current = st.top();
 		st.pop();
 		setHeight(current);
-	}
-    }
+        int tmp_height, old_height;
+//        tmp_node = pop();
+        old_height = current->height;
+        if( current->left->height - current->right->height == 2 ){
+                if( current->left->left->height - current->right->height == 1 ){
+                    right_rotation( current );
+                current->right->height = current->right->left->height + 1;
+                current->height  = current->right->height + 1;
+            }
+            else{
+                left_rotation( current->left );
+                right_rotation( current );
+                tmp_height = current->left->left->height;
+                current->left->height = tmp_height + 1;
+                current->right->height = tmp_height + 1;
+                current->height = tmp_height + 2;
+            }
+        }
+        else if(current->right->height - current->left->height == 2){
+            if( current->right->right->height - current->left->height == 1 ){
+                left_rotation( current );
+                current->left->height = current->left->right->height + 1;
+                current->height  = current->left->height + 1;
+            }
+            else{
+                right_rotation( current->right );
+                left_rotation( current );
+                tmp_height = current->right->right->height;
+                current->right->height = tmp_height + 1;
+                current->left->height = tmp_height + 1;
+                current->height = tmp_height + 2;
+            }
+        }
+     }
+   }
     // txt->_text.push_back(new_line);
 }
 
@@ -164,10 +222,121 @@ char * set_line( text_t *txt, int index, char * new_line){
 
 
 void insert_line( text_t *txt, int index, char * new_line){
+    if(txt->left == NULL){
+        txt->left = (text_t*)new_line;
+        txt->key = 1;
+    }
+    else{
+        std::stack <text_t*> st;
+        text_t* tmp_node = txt;
+        while(tmp_node->right!=NULL){
+            if(tmp_node->key < index){
+                st.push(tmp_node);
+                tmp_node = tmp_node->left;
+            }
+            else{
+                st.push(tmp_node);
+                tmp_node = tmp_node->right;
+            }
+        }
+        text_t* new_node = get_node();
+        text_t* old_node_dup = get_node();
+        
+        old_node_dup->left=tmp_node->left;
+        old_node_dup->right=NULL;
+        old_node_dup->key=tmp_node->key;
+        old_node_dup->height=0;
+        tmp_node->left=new_node;
+        tmp_node->height=1;
+        new_node->left = (text_t*)new_line;
+        new_node->key = tmp_node->key + 1;
+        new_node->height = 0;
+        tmp_node->right = old_node_dup;
+        tmp_node->key = tmp_node->key + 1;
+        
+        while(!st.empty()){
+            text_t* current = st.top();
+            st.pop();
+            //setHeight(current);
+            int tmp_height, old_height;
+            //        tmp_node = pop();
+            old_height = current->height;
+            if( current->left->height - current->right->height == 2 ){
+                if( current->left->left->height - current->right->height == 1 ){
+                    right_rotation( current );
+                    current->right->height = current->right->left->height + 1;
+                    current->height  = current->right->height + 1;
+                }
+                else{
+                    left_rotation( current->left );
+                    right_rotation( current );
+                    tmp_height = current->left->left->height;
+                    current->left->height = tmp_height + 1;
+                    current->right->height = tmp_height + 1;
+                    current->height = tmp_height + 2;
+                }
+            }
+            else if(current->right->height - current->left->height == 2){
+                if( current->right->right->height - current->left->height == 1 ){
+                    left_rotation( current );
+                    current->left->height = current->left->right->height + 1;
+                    current->height  = current->left->height + 1;
+                }
+                else{
+                    right_rotation( current->right );
+                    left_rotation( current );
+                    tmp_height = current->right->right->height;
+                    current->right->height = tmp_height + 1;
+                    current->left->height = tmp_height + 1;
+                    current->height = tmp_height + 2;
+                }
+            }
+        }
+        
+    }
     // txt->_text.insert(txt->_text.begin() + index - 1, new_line);
 }
 
 char * delete_line( text_t *txt, int index){
+    text_t *tmp_node, *upper_node, *other_node;
+    object_t deleted_object;
+    if( txt->left == NULL )
+        return( NULL );
+    else if( txt->right == NULL )
+    {   if( txt->key == index ){
+        deleted_object = (object_t) txt->left;
+        txt->left = NULL;
+        return( deleted_object );
+       }
+       else
+         return( NULL );
+    }
+    else
+    {
+        tmp_node = txt;
+        while( tmp_node->right != NULL ){
+            upper_node = tmp_node;
+            if( index < tmp_node->key )
+            {   tmp_node = upper_node->left;
+                other_node = upper_node->right;
+            }
+            else
+            {    tmp_node = upper_node->right;
+                other_node = upper_node->left;
+            }
+        }
+        if( tmp_node->key != index )
+            return( NULL );
+        else
+        {   upper_node->key = other_node->key;
+            upper_node->left = other_node->left;
+            upper_node->right = other_node->right;
+            deleted_object = (object_t) tmp_node->left;
+//            return_node( tmp_node );
+//            return_node( other_node );
+            return( deleted_object );
+        }
+    }  // end left column else
     // char *old = txt->_text[index-1];
     // txt->_text.erase(txt->_text.begin()+index-1);
     // return old;
