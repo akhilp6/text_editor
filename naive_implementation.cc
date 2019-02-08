@@ -43,7 +43,7 @@ text_t * create_text(){
     text_t *tmp_node;
     tmp_node = get_node();
     tmp_node->left = NULL;
-    tmp_node->height = 1;
+    tmp_node->height = 0;
     return( tmp_node );
 }
 
@@ -54,16 +54,16 @@ int length_text(text_t *txt){
       else if(txt->left == NULL){
         return 0;
       }
-      else{
+      else/*{
             text_t *tmp_node = txt;
             while(tmp_node->right!=NULL){
                 tmp_node = tmp_node->right;
-            }
-            return tmp_node->key;
+            }*/
+            return txt->key;
       }
     // if (txt == NULL) return -1;
     // return txt->_text.size();
-}
+
 
 char * get_line( text_t *txt, int index){
     text_t *tmp_node;
@@ -72,10 +72,12 @@ char * get_line( text_t *txt, int index){
     else
     {  tmp_node = txt;
       while( tmp_node->right != NULL )
-      {   if( index < tmp_node->key )
+      {   if( index <= tmp_node->left->key )
                tmp_node = tmp_node->left;
-          else
+          else{
+			  index=index-tmp_node->left->key;
                tmp_node = tmp_node->right;
+		  }
       }
       if( tmp_node->key == index )
          return( (char *) tmp_node->left );
@@ -94,11 +96,12 @@ void left_rotation(text_t   *n){
      tmp_node = n->left;
      tmp_key = n->key;
      n->left = n->right;
-     n->key = n->right->key;
+     //n->key = n->right->key;
      n->right = n->left->right;   // same as saying n->right->right
      n->left->right = n->left->left;  //same as saying n->right->left
      n->left->left = tmp_node;
-     n->left->key = tmp_key;
+     //n->left->key = tmp_key;
+	 n->left->key = n->left->left->key + n->left->right->key;
 }
 void right_rotation(text_t* n){
     text_t   *tmp_node;
@@ -106,17 +109,19 @@ void right_rotation(text_t* n){
     tmp_node = n->right;
     tmp_key = n->key;
     n->right = n->left;
-    n->key = n->left->key;
+    //n->key = n->left->key;
     n->left = n->right->left;
     n->right->left = n->right->right;
     n->right->right = tmp_node;
-    n->right->key = tmp_key;
+    //n->right->key = tmp_key;
+	n->right->key = n->right->left->key + n->right->right->key;
 }
 
 void append_line( text_t *txt, char * new_line){
     if(txt->left == NULL){
         txt->left = (text_t*)new_line;
         txt->key = 1;
+		txt->height = 0;
     }
     else{
 	/*1. Create stack
@@ -130,6 +135,7 @@ void append_line( text_t *txt, char * new_line){
         while(tmp_node->right!=NULL){
 	//2. Push every node that is visited to stack
 	        st.push(tmp_node);
+			tmp_node->key=tmp_node->key+1;
             tmp_node = tmp_node->right;
         }
         text_t* new_node = get_node();
@@ -144,7 +150,7 @@ void append_line( text_t *txt, char * new_line){
         tmp_node->height=1;
 
         new_node->left = (text_t*)new_line;
-        new_node->key = tmp_node->key + 1;
+        new_node->key = 1;
 	    new_node->height = 0;
         tmp_node->right = new_node;
         tmp_node->key = tmp_node->key + 1;
@@ -153,7 +159,7 @@ void append_line( text_t *txt, char * new_line){
 	while(!st.empty()){
 		text_t* current = st.top();
 		st.pop();
-		setHeight(current);
+		//setHeight(current);
         int tmp_height, old_height;
 //        tmp_node = pop();
         old_height = current->height;
@@ -201,10 +207,13 @@ char * set_line( text_t *txt, int index, char * new_line){
     else{
          tmp_node = txt;
         while( tmp_node->right != NULL ){ 
-          if( index < tmp_node->key )
+          if( index <= tmp_node->left->key )
                tmp_node = tmp_node->left;
-          else
+          else{
+			  index=index-tmp_node->left->key;
                tmp_node = tmp_node->right;
+			   
+		  }
         }
         if( tmp_node->key == index ){
            text_t *old_obj;
@@ -227,16 +236,24 @@ void insert_line( text_t *txt, int index, char * new_line){
         txt->key = 1;
     }
     else{
+		if(index>txt->key){
+			append_line(txt, new_line);
+			return;
+		}
         std::stack <text_t*> st;
         text_t* tmp_node = txt;
         while(tmp_node->right!=NULL){
-            if(tmp_node->key < index){
+            if(tmp_node->left->key>=index){
                 st.push(tmp_node);
+				tmp_node->key=tmp_node->key+1;
                 tmp_node = tmp_node->left;
             }
             else{
                 st.push(tmp_node);
+				tmp_node->key=tmp_node->key+1;
+				index=index-tmp_node->left->key;
                 tmp_node = tmp_node->right;
+				
             }
         }
         text_t* new_node = get_node();
@@ -249,7 +266,7 @@ void insert_line( text_t *txt, int index, char * new_line){
         tmp_node->left=new_node;
         tmp_node->height=1;
         new_node->left = (text_t*)new_line;
-        new_node->key = tmp_node->key + 1;
+        new_node->key = 1;
         new_node->height = 0;
         tmp_node->right = old_node_dup;
         tmp_node->key = tmp_node->key + 1;
@@ -298,15 +315,18 @@ void insert_line( text_t *txt, int index, char * new_line){
 }
 
 char * delete_line( text_t *txt, int index){
+	/*
+	Part of this code is referred from lecture presentations by Prof. Kemafor
+	*/
     text_t *tmp_node, *upper_node, *other_node;
-    object_t deleted_object;
+    object_t deleted_line;
     if( txt->left == NULL )
         return( NULL );
     else if( txt->right == NULL )
     {   if( txt->key == index ){
-        deleted_object = (object_t) txt->left;
+        deleted_line = (object_t) txt->left;
         txt->left = NULL;
-        return( deleted_object );
+        return( deleted_line );
        }
        else
          return( NULL );
@@ -316,12 +336,15 @@ char * delete_line( text_t *txt, int index){
         tmp_node = txt;
         while( tmp_node->right != NULL ){
             upper_node = tmp_node;
-            if( index < tmp_node->key )
-            {   tmp_node = upper_node->left;
+            if( index <= tmp_node->left->key )
+            {   tmp_node->key=tmp_node->key-1;
+				tmp_node = upper_node->left;
                 other_node = upper_node->right;
             }
             else
-            {    tmp_node = upper_node->right;
+            {   tmp_node->key=tmp_node->key-1;
+				index=index-tmp_node->left->key;
+				tmp_node = upper_node->right;
                 other_node = upper_node->left;
             }
         }
@@ -331,10 +354,10 @@ char * delete_line( text_t *txt, int index){
         {   upper_node->key = other_node->key;
             upper_node->left = other_node->left;
             upper_node->right = other_node->right;
-            deleted_object = (object_t) tmp_node->left;
+            deleted_line = (object_t) tmp_node->left;
 //            return_node( tmp_node );
 //            return_node( other_node );
-            return( deleted_object );
+            return( deleted_line );
         }
     }  // end left column else
     // char *old = txt->_text[index-1];
