@@ -35,6 +35,8 @@ text_t *get_node()
      tmp = currentblock++;
      size_left -= 1;
   }
+  tmp->left=NULL;
+  tmp->right=NULL;
 tmp->height=0;
   return( tmp );
 }
@@ -159,7 +161,7 @@ void append_line( text_t *txt, char * new_line){
 	while(!st.empty()){
 		text_t* current = st.top();
 		st.pop();
-		//setHeight(current);
+		setHeight(current);
         int tmp_height, old_height;
 //        tmp_node = pop();
         old_height = current->height;
@@ -274,7 +276,7 @@ void insert_line( text_t *txt, int index, char * new_line){
         while(!st.empty()){
             text_t* current = st.top();
             st.pop();
-            //setHeight(current);
+            setHeight(current);
             int tmp_height, old_height;
             //        tmp_node = pop();
             old_height = current->height;
