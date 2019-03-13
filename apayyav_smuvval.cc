@@ -15,26 +15,21 @@ struct text_t{key_t      key;
 
 text_t *currentblock = NULL;
 int    size_left;
-text_t *free_list = NULL;
-int nodes_taken = 0;
-int nodes_returned = 0;
 
 text_t *get_node()
-{ text_t *tmp;
-  nodes_taken += 1;
-  if( free_list != NULL )
-  {  tmp = free_list;
-     free_list = free_list -> right;
-  }
-  else
-  {  if( currentblock == NULL || size_left == 0)
+{ 
+	/*
+	This function creates a struct and allocates memory. Returns the pointer to memory location.
+	This function creates 256 nodes at a stretch and uses them. Once finished, it repeates creating 256 nodes.
+	*/
+text_t *tmp;
+  if( currentblock == NULL || size_left == 0)
      {  currentblock = 
                 (text_t *) malloc( BLOCKSIZE * sizeof(text_t) );
         size_left = BLOCKSIZE;
      }
      tmp = currentblock++;
      size_left -= 1;
-  }
   tmp->left=NULL;
   tmp->right=NULL;
 tmp->height=0;
@@ -42,6 +37,9 @@ tmp->height=0;
 }
 
 text_t * create_text(){
+/*
+	This function obtains new struct text_t memory space from get_node function and returns a reference of it to caller.
+*/
     text_t *tmp_node;
     tmp_node = get_node();
     tmp_node->left = NULL;
@@ -50,6 +48,10 @@ text_t * create_text(){
 }
 
 int length_text(text_t *txt){
+/*
+	This function returns the number of lines present in the storage.
+	As we are storing line count in parent, returning the line count present in the root node shall suffice.
+*/
       if(txt == NULL){
         return -1;
       }
@@ -68,6 +70,9 @@ int length_text(text_t *txt){
 
 
 char * get_line( text_t *txt, int index){
+/*
+	This function navigates through the tree to reach the correct leaf containing the required line. If found, it returns the line.
+*/
     text_t *tmp_node;
     if( txt->left == NULL )
       return(NULL);
@@ -90,6 +95,10 @@ char * get_line( text_t *txt, int index){
 }
 
 void setHeight(text_t* node){
+/*
+	This function is used to set height of a node, using the information from its children.
+	Used while insertion and appending.
+*/
 	node->height=node->left->height>node->right->height?node->left->height+1:node->right->height+1;
 }
 void left_rotation(text_t   *n){
@@ -98,12 +107,10 @@ void left_rotation(text_t   *n){
      tmp_node = n->left;
      tmp_key = n->key;
      n->left = n->right;
-     //n->key = n->right->key;
-     n->right = n->left->right;   // same as saying n->right->right
-     n->left->right = n->left->left;  //same as saying n->right->left
+     n->right = n->left->right;   
+     n->left->right = n->left->left;  
      n->left->left = tmp_node;
-     //n->left->key = tmp_key;
-	 n->left->key = n->left->left->key + n->left->right->key;
+     n->left->key = n->left->left->key + n->left->right->key;
 }
 void right_rotation(text_t* n){
     text_t   *tmp_node;
@@ -120,6 +127,9 @@ void right_rotation(text_t* n){
 }
 
 void append_line( text_t *txt, char * new_line){
+/*
+	This function appends new line at the end.
+*/
     if(txt->left == NULL){
         txt->left = (text_t*)new_line;
         txt->key = 1;
@@ -165,6 +175,7 @@ void append_line( text_t *txt, char * new_line){
         int tmp_height, old_height;
 //        tmp_node = pop();
         old_height = current->height;
+	//The four cases below are referred from lecture notes of Dr. Kemafor.
         if( current->left->height - current->right->height == 2 ){
                 if( current->left->left->height - current->right->height == 1 ){
                     right_rotation( current );
@@ -202,6 +213,9 @@ void append_line( text_t *txt, char * new_line){
 
 
 char * set_line( text_t *txt, int index, char * new_line){
+/*
+	Replaces content present at a line, if the line exists.
+*/
     text_t *tmp_node;
     if(txt->left == NULL){
         return(NULL);
@@ -318,17 +332,17 @@ void insert_line( text_t *txt, int index, char * new_line){
 
 char * delete_line( text_t *txt, int index){
 	/*
-	Part of this code is referred from lecture presentations by Prof. Kemafor
+	Part of this code is referred from lecture presentations by Dr. Kemafor
 	*/
-    text_t *tmp_node, *upper_node, *other_node;
-    object_t deleted_line;
+    text_t *tmp_node, *parent_node, *sibling_node;
+    object_t line;
     if( txt->left == NULL )
         return( NULL );
     else if( txt->right == NULL )
     {   if( txt->key == index ){
-        deleted_line = (object_t) txt->left;
+        line = (object_t) txt->left;
         txt->left = NULL;
-        return( deleted_line );
+        return( line );
        }
        else
          return( NULL );
@@ -337,31 +351,29 @@ char * delete_line( text_t *txt, int index){
     {
         tmp_node = txt;
         while( tmp_node->right != NULL ){
-            upper_node = tmp_node;
+            parent_node = tmp_node;
             if( index <= tmp_node->left->key )
             {   tmp_node->key=tmp_node->key-1;
-				tmp_node = upper_node->left;
-                other_node = upper_node->right;
+				tmp_node = parent_node->left;
+                sibling_node = parent_node->right;
             }
             else
             {   tmp_node->key=tmp_node->key-1;
 				index=index-tmp_node->left->key;
-				tmp_node = upper_node->right;
-                other_node = upper_node->left;
+				tmp_node = parent_node->right;
+                sibling_node = parent_node->left;
             }
         }
         if( tmp_node->key != index )
             return( NULL );
         else
-        {   upper_node->key = other_node->key;
-            upper_node->left = other_node->left;
-            upper_node->right = other_node->right;
-            deleted_line = (object_t) tmp_node->left;
-//            return_node( tmp_node );
-//            return_node( other_node );
-            return( deleted_line );
+        {   parent_node->key = sibling_node->key;
+            parent_node->left = sibling_node->left;
+            parent_node->right = sibling_node->right;
+            line = (object_t) tmp_node->left;
+            return( line );
         }
-    }  // end left column else
+    }  
     // char *old = txt->_text[index-1];
     // txt->_text.erase(txt->_text.begin()+index-1);
     // return old;

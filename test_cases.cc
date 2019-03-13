@@ -7,7 +7,7 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-/*
+
 // tests empty text
 TEST(test_create_text, create_test){
     text_t* text = create_text();
@@ -53,7 +53,6 @@ TEST(test_length_text, k_lines_test_1){
     }
     EXPECT_EQ(length_text(text), 10000000);
 }
-*/
 // multiple tests
 TEST(test_1, _){
     int i;
